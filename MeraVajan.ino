@@ -10,15 +10,15 @@ bool deviceConnected = false;
 #define led 2
 BLEService *pService = NULL;
 String value = "";
+float weight = 0.00;
 
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 
-#define DT 4
+#define DT 14
 #define SCK 5
 
-float weight;
 
 HX711 scale;
 
@@ -42,21 +42,24 @@ class MyServerCallbacks : public BLEServerCallbacks {
 class MyCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) {
     value = pCharacteristic->getValue().c_str();
-    weight = scale.get_units(20);
-    pCharacteristic->setValue(value);
-    pCharacteristic->notify();
-    Serial.println(value);
+    if (value == "get") {
+      Serial.print("Weight String: ");
+      String weightStr = String(weight, 2);
+      Serial.println(weightStr);
+      pCharacteristic->setValue(weightStr.c_str());
+      pCharacteristic->notify();
+    }
   }
 };
-
 
 void setup() {
 
   pinMode(led,OUTPUT);
   Serial.begin(115200);
 
-  scale.set_scale(489.35);
-  scale.tare(); 
+  scale.begin(DT, SCK);
+  scale.set_scale(0.98);
+  scale.tare();
 
   BLEDevice::init("Mera Vajan");
   pServer = BLEDevice::createServer();
@@ -80,6 +83,8 @@ void setup() {
 }
 
 void loop() {
+  weight = scale.get_value(10);
+  Serial.println(weight);
   if (deviceConnected) {
     digitalWrite(led, HIGH);
     delay(1000);
